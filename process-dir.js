@@ -147,12 +147,7 @@ async function replacePackage (dir, file, files, envTargets) {
   pkg.module = 'index.js'
   pkg['react-native'] = 'index.js'
 
-  if (envTargets.includes(file)) {
-    pkg.browser = {
-      development: './index.dev.js',
-      production: './index.prod.js'
-    }
-  } else if (files.includes(file.replace(/\.js$/, '.browser.js'))) {
+  if (files.includes(file.replace(/\.js$/, '.browser.js'))) {
     pkg.browser = {
       './index.js': './index.browser.js'
     }
@@ -171,7 +166,10 @@ async function replacePackage (dir, file, files, envTargets) {
       if (i !== 'index.js') path += '/' + dirname(i).replace(/\\/g, '/')
       pkg.exports[path + '/package.json'] = path + '/package.json'
       if (!pkg.exports[path]) pkg.exports[path] = {}
-      if (envTargets.includes(i)) {
+      if (
+        envTargets.includes(i) ||
+        envTargets.includes(i.replace(/\.js$/, '.browser.js'))
+      ) {
         pkg.exports[path].browser = {
           development: path + '/index.dev.js',
           production: path + '/index.prod.js'
@@ -226,7 +224,7 @@ function findEnvTargets (sources) {
     ([file]) =>
       file.endsWith('index.js') && !dirsWithBrowserJs.includes(dirname(file))
   )
-  return onlyIndexJs
+  return [...browserJs, ...onlyIndexJs]
     .filter(([, source]) => hasEnvCondition(source))
     .map(([file]) => file)
 }
@@ -290,7 +288,10 @@ async function process (dir) {
   await Promise.all(
     sources.map(async ([file, source]) => {
       if (file.endsWith('index.browser.js')) {
-        await replaceToESM(dir, file, source)
+        let [, modifiedSource] = await replaceToESM(dir, file, source)
+        if (envTargets.includes(file)) {
+          await replaceEnvConditions(dir, file, modifiedSource)
+        }
       } else if (file.endsWith('index.native.js')) {
         await replaceToESM(dir, file, source)
       } else {

@@ -380,6 +380,8 @@ it('generates prod and dev files for files with `process.env.NODE_ENV`', async (
   let packageJsonContent = JSON.parse(
     (await readFile(join(fixtureDir, 'package.json'))).toString()
   )
+  console.debug(packageJsonContent)
+  expect(packageJsonContent.browser).toBeUndefined()
   expect(packageJsonContent.exports['.']).toEqual({
     browser: {
       production: './index.prod.js',
@@ -404,8 +406,7 @@ it('generates prod and dev files for files with `process.env.NODE_ENV`', async (
 
   expect(nestedPackageJsonContent).toEqual({
     'browser': {
-      production: './index.prod.js',
-      development: './index.dev.js'
+      './index.js': './index.browser.js'
     },
     'main': 'index.cjs',
     'module': 'index.js',
